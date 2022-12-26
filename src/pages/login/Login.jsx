@@ -107,7 +107,6 @@ function Login() {
               )}
             </button>
             <div className="loginLinks">
-              <span className="loginForgot">Forgot Password?</span>
               <Link to="/signup" className="loginRegisterButton">
                 Switch to sign up <ArrowRightAltIcon></ArrowRightAltIcon>
               </Link>

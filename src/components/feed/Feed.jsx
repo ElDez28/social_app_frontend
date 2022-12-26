@@ -5,15 +5,12 @@ import { useState } from "react";
 import { useHttp } from "../../hooks/useHttp";
 import { useEffect } from "react";
 import LoadingSpinner from "../loadingSpinner/LoadingSpinner";
-import { useSelector } from "react-redux";
-import { useCallback } from "react";
-import axios from "axios";
+
 function Feed({ id }) {
   const [posts, setPosts] = useState([]);
-  const { user } = useSelector((state) => state.user);
-  const { isLoading, error, sendRequest } = useHttp();
+  const { isLoading, sendRequest } = useHttp();
   const [newPost, setNewPost] = useState({});
-
+  const [comments, setComments] = useState([]);
   useEffect(() => {
     (async () => {
       const res = await sendRequest(
@@ -21,11 +18,25 @@ function Feed({ id }) {
         `${process.env.REACT_APP_BACKEND_URL}/posts`
       );
       setPosts(res.data);
+
+      setComments(res.comments);
     })();
   }, [sendRequest, newPost]);
 
   const addPost = async (post) => {
     setNewPost({ ...post, likes: [] });
+  };
+
+  const addComment = (newComment) => {
+    setComments((prev) => [newComment, ...prev]);
+  };
+
+  const removeComment = (id) => {
+    const targetedItem = comments.find((item) => item._id === id);
+    const index = comments.indexOf(targetedItem);
+    const newArray = [...comments];
+    newArray.splice(index, 1);
+    setComments(newArray);
   };
   return (
     <div className="feed">
@@ -37,11 +48,16 @@ function Feed({ id }) {
         )}
         {posts.length > 0 &&
           posts.map((item, i) => {
+            const postComments = comments.filter(
+              (comment) => comment.postId[0].toString() === item._id.toString()
+            );
             const img = item.img
               ? `${process.env.REACT_APP_BACKEND_SHORT}/public/images/posts/${item.img}`
               : "";
             return (
               <Post
+                addComment={addComment}
+                removeComment={removeComment}
                 key={i}
                 username={item.userId.username}
                 time={item.createdAt}
@@ -49,7 +65,7 @@ function Feed({ id }) {
                 text={item.desc}
                 img={img}
                 likes={item.likes.length}
-                comment={item.comment}
+                comments={postComments}
                 id={item._id}
               ></Post>
             );

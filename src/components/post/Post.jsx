@@ -17,6 +17,9 @@ function Post(props) {
   const [hearths, setHearths] = useState([]);
   const [loved, setLoved] = useState(false);
   const [liked, setLiked] = useState(false);
+  const [openComments, setOpenComments] = useState(false);
+  const [currentUser, setCurrentUser] = useState({});
+  const [newComment, setNewComment] = useState("");
 
   const clickHandler = () => {
     navigate(`/${props.username}`);
@@ -33,7 +36,16 @@ function Post(props) {
       setHearths(data.data.data.hearths);
     })();
   }, [sendRequest, props.id]);
+  const deleteComment = async (id) => {
+    try {
+      await sendRequest(
+        "delete",
+        `${process.env.REACT_APP_BACKEND_URL}/comments/${id}`
+      );
 
+      props.removeComment(id);
+    } catch (err) {}
+  };
   useEffect(() => {
     if (likes.includes(user._id)) {
       setLiked(true);
@@ -42,6 +54,12 @@ function Post(props) {
       setLoved(true);
     }
   }, [hearths, likes, user._id]);
+
+  useEffect(() => {
+    const user = localStorage.getItem("user");
+    const parsedUser = JSON.parse(user);
+    setCurrentUser(parsedUser);
+  }, []);
 
   const hearthHandler = async () => {
     try {
@@ -63,7 +81,22 @@ function Post(props) {
       setHearths((prev) => prev.filter((id) => id !== user._id));
     }
   };
+  const submitComment = async (postId) => {
+    try {
+      const res = await sendRequest(
+        "post",
+        `${process.env.REACT_APP_BACKEND_URL}/comments/${postId}`,
+        { text: newComment }
+      );
+      const newCommentData = await sendRequest(
+        "get",
+        `${process.env.REACT_APP_BACKEND_URL}/comments/${res.data._id}`
+      );
 
+      props.addComment(newCommentData.data.data);
+      setNewComment("");
+    } catch (err) {}
+  };
   const likeHandler = async () => {
     try {
       await sendRequest(
@@ -137,10 +170,55 @@ function Post(props) {
               </span>
             </div>
           </div>
-          <div className="postBottomRight">
-            <span>{props.comment} comments</span>
+          <div
+            onClick={() => setOpenComments((prev) => !prev)}
+            className="postBottomRight"
+          >
+            <span>
+              {`${props.comments?.length} ${
+                props.comments?.length === 1 ? "comment" : "comments"
+              }`}{" "}
+            </span>
           </div>
         </div>
+        {openComments && (
+          <div className="commentsContainer">
+            {props.comments?.map((item) => {
+              return (
+                <div key={item._id} className="commentWrapper">
+                  <div className="commentImg">
+                    <img
+                      src={`${process.env.REACT_APP_BACKEND_SHORT}/public/images/users/${item.userId[0].photo}`}
+                      alt=""
+                    ></img>
+                    <p className="username">{item.userId[0].username}</p>
+                  </div>
+                  <p className="commentText">{item.text}</p>
+                  {item.userId[0]._id === currentUser._id && (
+                    <button
+                      type="button"
+                      onClick={() => deleteComment(item._id)}
+                      className="deleteComment"
+                    >
+                      Delete
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+            <div className="inputComment">
+              <input
+                onChange={(e) => setNewComment(e.target.value)}
+                value={newComment}
+                type="text"
+                placeholder="Write your comment..."
+              ></input>
+              <button onClick={() => submitComment(props.id)} type="button">
+                Submit
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

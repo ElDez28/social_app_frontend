@@ -20,6 +20,7 @@ function Profile() {
   const username = params.id;
   const [currentUser, setCurrentUser] = useState({});
   const [posts, setPosts] = useState([]);
+  const [comments, setComments] = useState([]);
 
   useEffect(() => {
     (async () => {
@@ -30,10 +31,27 @@ function Profile() {
 
       setCurrentUser(res.data[0]);
       dispatch(friendActions.setFriend(res.data[0]));
-      setPosts(res.data[0].myPosts);
+
+      const postRes = await sendRequest(
+        "get",
+        `${process.env.REACT_APP_BACKEND_URL}/posts/${res.data[0]._id}/getUserPosts`
+      );
+      setPosts(postRes.data);
+      const comments = postRes.data.map((item) => item.comments).flat();
+      setComments(comments);
     })();
   }, [username, sendRequest, dispatch]);
-  console.log(friend);
+  const addComment = (newComment) => {
+    setComments((prev) => [newComment, ...prev]);
+  };
+
+  const removeComment = (id) => {
+    const targetedItem = comments.find((item) => item._id === id);
+    const index = comments.indexOf(targetedItem);
+    const newArray = [...comments];
+    newArray.splice(index, 1);
+    setComments(newArray);
+  };
   const addPost = async (post) => {
     await sendRequest(
       "get",
@@ -83,6 +101,11 @@ function Profile() {
                     )}
                     {posts.length > 0 &&
                       posts.map((item, i) => {
+                        const postComments = comments?.filter(
+                          (comment) =>
+                            comment.postId[0].toString() === item._id.toString()
+                        );
+
                         const img = item.img
                           ? `${process.env.REACT_APP_BACKEND_SHORT}/public/images/posts/${item.img}`
                           : "";
@@ -95,8 +118,10 @@ function Profile() {
                             text={item.desc}
                             img={img}
                             likes={item.likes.length}
-                            comment={item.comment}
+                            comments={postComments}
                             id={item._id}
+                            addComment={addComment}
+                            removeComment={removeComment}
                           ></Post>
                         );
                       })}
